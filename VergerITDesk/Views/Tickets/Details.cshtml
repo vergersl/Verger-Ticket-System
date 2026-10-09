@@ -1,0 +1,159 @@
+@model TicketDetailVm
+@{
+    ViewData["Title"] = Model.Ticket.Title;
+    var t = Model.Ticket;
+    var mailto = TempData["MailtoLink"] as string;
+}
+<div class="topbar">
+    <div><h1>@t.Code</h1><p>@t.Title</p></div>
+    <a asp-action="Index" class="btn sm">← Back</a>
+</div>
+<div class="view" style="max-width:720px;">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">
+        <span class="badge prio-@t.Priority">@t.Priority</span>
+        <span class="badge status-@t.Status">@t.Status</span>
+        <span class="owner-chip">@t.Category</span>
+        <span class="owner-chip">SLA @t.SlaHours h</span>
+        @if (t.Status == TicketStatus.AwaitingInfo)
+        {
+            <span class="owner-chip">⏸ SLA clock paused</span>
+        }
+    </div>
+
+    <div class="desc-box">@(string.IsNullOrEmpty(t.Description) ? "No description provided." : t.Description)</div>
+
+    <h3 style="font-size:13px;color:var(--text-dim);">Business impact / savings</h3>
+    <div class="desc-box" style="border-left:3px solid var(--green-500);">
+        @t.BusinessImpact
+        @if (t.ImpactValueUsd.HasValue)
+        {
+            <div style="margin-top:8px;"><span class="pill good">$@t.ImpactValueUsd.Value.ToString("N0")</span></div>
+        }
+    </div>
+
+    <div class="mini-grid">
+        <div class="mini-field"><label>Requester</label><div>@(t.Requester?.DisplayName ?? "—")</div></div>
+        <div class="mini-field"><label>Email</label><div>@(t.Requester?.Email ?? "—")</div></div>
+        @if (Model.CanManage)
+        {
+            <form id="editForm" asp-action="SaveEdits" method="post" style="display:contents;">
+                <input type="hidden" name="id" value="@t.Id" />
+                <div class="mini-field">
+                    <label>Status</label>
+                    <select name="status">
+                        @foreach (var s in Enum.GetValues<TicketStatus>())
+                        {
+                            <option value="@s" selected="@(s==t.Status)">@s</option>
+                        }
+                    </select>
+                </div>
+                <div class="mini-field">
+                    <label>Assigned to</label>
+                    <input name="assignedTo" value="@t.AssignedTo" placeholder="e.g. Dilan" />
+                </div>
+            </form>
+        }
+        else
+        {
+            <div class="mini-field"><label>Status</label><div>@t.Status</div></div>
+            <div class="mini-field"><label>Assigned to</label><div>@(t.AssignedTo ?? "Unassigned")</div></div>
+        }
+    </div>
+
+    @if (Model.CanManage)
+    {
+        <div class="action-row">
+            <button type="submit" form="editForm" class="btn sm primary">Save changes</button>
+
+            @if (t.Status != TicketStatus.Resolved && t.Status != TicketStatus.Closed)
+            {
+                <form asp-action="Resolve" method="post" style="display:inline;">
+                    <input type="hidden" name="id" value="@t.Id" />
+                    <button type="submit" class="btn sm">Mark resolved</button>
+                </form>
+            }
+            @if (t.Status == TicketStatus.Resolved)
+            {
+                <form asp-action="Reopen" method="post" style="display:inline;">
+                    <input type="hidden" name="id" value="@t.Id" />
+                    <button type="submit" class="btn sm">Reopen</button>
+                </form>
+            }
+            @if (t.Status == TicketStatus.AwaitingInfo)
+            {
+                <form asp-action="Resume" method="post" style="display:inline;">
+                    <input type="hidden" name="id" value="@t.Id" />
+                    <button type="submit" class="btn sm">▶ Resume work</button>
+                </form>
+            }
+            @if (t.Status != TicketStatus.Resolved && t.Status != TicketStatus.Closed)
+            {
+                <button type="button" class="btn sm" onclick="document.getElementById('infoPanel').style.display='block'">✉ Request more info</button>
+            }
+            @if (Model.CanDelete)
+            {
+                <form asp-action="Delete" method="post" style="margin-left:auto;" onsubmit="return confirm('Delete @t.Code permanently? This can\'t be undone.');">
+                    <input type="hidden" name="id" value="@t.Id" />
+                    <button type="submit" class="btn sm danger">🗑 Delete ticket</button>
+                </form>
+            }
+        </div>
+
+        <div id="infoPanel" class="info-panel" style="display:none;">
+            <form asp-action="RequestInfo" method="post">
+                <input type="hidden" name="TicketId" value="@t.Id" />
+                <div class="field">
+                    <label>To (requester email)</label>
+                    <input name="To" value="@t.Requester?.Email" placeholder="requester@vergernaturals.com" />
+                </div>
+                <div class="field">
+                    <label>Subject</label>
+                    <input name="Subject" value="More information needed — @t.Code: @t.Title" />
+                </div>
+                <div class="field">
+                    <label>Message</label>
+                    <textarea name="Body" style="min-height:110px;">Hi @(t.Requester?.DisplayName ?? "there"),
+
+We're working on your IT support ticket @t.Code ("@t.Title") but need a bit more information before we can continue:
+
+-
+
+Could you please reply with these details at your earliest convenience? We'll pick this back up as soon as we hear from you.
+
+Thanks,
+Verger Naturals IT Team</textarea>
+                </div>
+                <div class="hint" style="margin-bottom:12px;">This sets the ticket to <b>Awaiting Info</b> (pausing its SLA clock), logs the request in the activity feed, and opens a pre-filled draft in your email app to send.</div>
+                <div style="display:flex;gap:8px;">
+                    <button type="button" class="btn sm" onclick="document.getElementById('infoPanel').style.display='none'">Cancel</button>
+                    <button type="submit" class="btn sm primary">Update status &amp; open email draft</button>
+                </div>
+            </form>
+        </div>
+    }
+
+    <h3 style="font-size:13px;color:var(--text-dim);">Activity</h3>
+    @if (!t.Comments.Any())
+    {
+        <p class="hint">No activity yet.</p>
+    }
+    else
+    {
+        foreach (var c in t.Comments.OrderBy(c => c.At))
+        {
+            <div class="comment"><span class="when">@c.At.ToLocalTime().ToString("g")</span><div class="who">@c.Author</div>@c.Text</div>
+        }
+    }
+
+    <form asp-action="AddComment" method="post" class="comment-input" style="margin-top:10px;">
+        <input type="hidden" name="id" value="@t.Id" />
+        <input name="text" placeholder="Add a note or update…" />
+        <button type="submit" class="btn sm primary">Post</button>
+    </form>
+</div>
+
+@if (!string.IsNullOrEmpty(mailto))
+{
+    <a id="mailtoLink" href="@mailto" style="display:none;"></a>
+    <script>document.getElementById('mailtoLink').click();</script>
+}

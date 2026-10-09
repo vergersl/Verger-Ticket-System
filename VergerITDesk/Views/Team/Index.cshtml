@@ -1,0 +1,36 @@
+@model IEnumerable<TeamMemberVm>
+@{ ViewData["Title"] = "Team & Roles"; }
+<div class="topbar">
+    <div><h1>Team &amp; Roles</h1><p>Manage who can work tickets and administer the desk</p></div>
+</div>
+<div class="view">
+    <p class="hint" style="margin-bottom:16px;">Everyone who registers starts as a Requester — they can raise and follow their own tickets, but can't change ticket status or edit KPIs. Promote people to Technician or Admin below.</p>
+    <div class="card">
+        <table>
+            <thead><tr><th>Person</th><th>Email</th><th>Role</th><th></th></tr></thead>
+            <tbody>
+            @foreach (var member in Model)
+            {
+                <tr>
+                    <td>@member.DisplayName @(member.IsMe ? "(you)" : "")</td>
+                    <td>@member.Email</td>
+                    <td><span class="owner-chip">@member.Role</span></td>
+                    <td style="display:flex;gap:6px;">
+                        @foreach (var role in AppRoles.All)
+                        {
+                            if (role != member.Role)
+                            {
+                                <form asp-action="AssignRole" method="post">
+                                    <input type="hidden" name="userId" value="@member.Id" />
+                                    <input type="hidden" name="role" value="@role" />
+                                    <button type="submit" class="btn sm @(role==AppRoles.Admin ? "primary" : "")">Make @role</button>
+                                </form>
+                            }
+                        }
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+</div>

@@ -1,0 +1,97 @@
+@model DashboardVm
+@{ ViewData["Title"] = "Dashboard"; var m = Model.Metrics; }
+<div class="topbar">
+    <div><h1>Dashboard</h1><p>Live KPI overview — Digital &amp; IT</p></div>
+    <a asp-controller="Tickets" asp-action="Create" class="btn primary">＋ New ticket</a>
+</div>
+<div class="view">
+    <div class="grid kpi-cards">
+        <div class="card"><h3>Total tickets</h3><div class="big">@m.Total</div><div class="sub">@m.Open currently open</div></div>
+        <div class="card"><h3>Open / In progress</h3><div class="big">@m.Open</div><div class="sub">@(m.AwaitingInfo > 0 ? $"{m.AwaitingInfo} awaiting requester info" : (m.Open > 0 ? "Needs attention" : "All clear"))</div></div>
+        <div class="card">
+            <h3>Resolved within SLA</h3><div class="big">@(m.SlaRate.HasValue ? $"{m.SlaRate.Value:P1}" : "—")</div><div class="sub">Target 90.0% · IT.3.5</div>
+            @if (m.SlaRate.HasValue) { <span class="pill @(m.SlaRate >= 0.9m ? "good" : "bad")">@(m.SlaRate >= 0.9m ? "On target" : "Below target")</span> }
+        </div>
+        <div class="card">
+            <h3>First-contact resolution</h3><div class="big">@(m.FcrRate.HasValue ? $"{m.FcrRate.Value:P1}" : "—")</div><div class="sub">Target 75.0% · IT.3.6</div>
+            @if (m.FcrRate.HasValue) { <span class="pill @(m.FcrRate >= 0.75m ? "good" : "bad")">@(m.FcrRate >= 0.75m ? "On target" : "Below target")</span> }
+        </div>
+        <div class="card"><h3>Avg. resolution time</h3><div class="big">@(m.AvgResolutionHours.HasValue ? (m.AvgResolutionHours < 48 ? $"{m.AvgResolutionHours:F0}h" : $"{m.AvgResolutionHours/24:F0}d") : "—")</div><div class="sub">Across resolved tickets</div></div>
+        <div class="card"><h3>Business impact captured</h3><div class="big">$@m.TotalImpactUsd.ToString("N0")</div><div class="sub">@m.QuantifiedCount of @m.ResolvedCount resolved tickets quantified</div></div>
+    </div>
+
+    <div class="grid two-col">
+        <div class="card">
+            <h3>Tickets by priority</h3>
+            <div class="barchart" style="margin-top:10px;">
+                @{ var maxP = Math.Max(1, Model.ByPriority.Values.DefaultIfEmpty(0).Max()); }
+                @foreach (var kv in Model.ByPriority)
+                {
+                    var pct = (int)Math.Round(100.0 * kv.Value / maxP);
+                    var color = kv.Key switch { TicketPriority.Critical => "var(--red-500)", TicketPriority.High => "var(--amber-500)", TicketPriority.Medium => "var(--blue-500)", _ => "var(--text-faint)" };
+                    <div class="bar-row"><div>@kv.Key</div><div class="bar-track"><div class="bar-fill" style="width:@(pct)%;background:@color;"></div></div><div class="val">@kv.Value</div></div>
+                }
+            </div>
+        </div>
+        <div class="card">
+            <h3>Tickets by category</h3>
+            <div class="barchart" style="margin-top:10px;">
+                @{ var maxC = Math.Max(1, Model.ByCategory.Values.DefaultIfEmpty(0).Max()); }
+                @if (!Model.ByCategory.Any()) { <div class="empty">No tickets yet</div> }
+                @foreach (var kv in Model.ByCategory)
+                {
+                    var pct = (int)Math.Round(100.0 * kv.Value / maxC);
+                    <div class="bar-row"><div title="@kv.Key">@kv.Key</div><div class="bar-track"><div class="bar-fill" style="width:@(pct)%;background:var(--green-500);"></div></div><div class="val">@kv.Value</div></div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="section-title"><h2>Ticket activity — last 14 days</h2><span>Every ticket appears here the moment it's raised</span></div>
+    <div class="grid two-col">
+        <div class="card">
+            <h3>Raised</h3>
+            <div class="barchart" style="margin-top:10px;">
+                @{ var maxR = Math.Max(1, Model.Last14Days.Select(d => d.Raised).DefaultIfEmpty(0).Max()); }
+                @foreach (var d in Model.Last14Days)
+                {
+                    var pct = (int)Math.Round(100.0 * d.Raised / maxR);
+                    <div class="bar-row"><div>@d.Label</div><div class="bar-track"><div class="bar-fill" style="width:@(pct)%;background:var(--blue-500);"></div></div><div class="val">@d.Raised</div></div>
+                }
+            </div>
+        </div>
+        <div class="card">
+            <h3>Resolved</h3>
+            <div class="barchart" style="margin-top:10px;">
+                @{ var maxRes = Math.Max(1, Model.Last14Days.Select(d => d.Resolved).DefaultIfEmpty(0).Max()); }
+                @foreach (var d in Model.Last14Days)
+                {
+                    var pct = (int)Math.Round(100.0 * d.Resolved / maxRes);
+                    <div class="bar-row"><div>@d.Label</div><div class="bar-track"><div class="bar-fill" style="width:@(pct)%;background:var(--green-500);"></div></div><div class="val">@d.Resolved</div></div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="section-title"><h2>Recent tickets</h2><span>@Model.Metrics.Total total</span></div>
+    <table>
+        <thead><tr><th>Ticket</th><th>Category</th><th>Priority</th><th>Status</th><th>Requester</th><th>Age</th></tr></thead>
+        <tbody>
+        @if (!Model.Recent.Any())
+        {
+            <tr><td colspan="6" class="empty">No tickets yet. <a asp-controller="Tickets" asp-action="Create" style="color:var(--green-600);font-weight:600;">Create the first one →</a></td></tr>
+        }
+        @foreach (var t in Model.Recent)
+        {
+            <tr class="row" onclick="location.href='@Url.Action("Details", "Tickets", new { id = t.Id })'">
+                <td><div style="font-weight:600;">@t.Title</div><div class="hint">@t.Code</div></td>
+                <td>@t.Category</td>
+                <td><span class="badge prio-@t.Priority">@t.Priority</span></td>
+                <td><span class="badge status-@t.Status">@t.Status</span></td>
+                <td>@(t.Requester?.DisplayName ?? "—")</td>
+                <td>@((DateTime.UtcNow - t.CreatedAt).Days)d</td>
+            </tr>
+        }
+        </tbody>
+    </table>
+</div>

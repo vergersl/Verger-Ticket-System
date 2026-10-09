@@ -1,0 +1,83 @@
+@{
+    var path = Context.Request.Path.Value?.ToLower() ?? "";
+    bool IsActive(string controller) => path.StartsWith("/" + controller.ToLower());
+    var isTechOrAdmin = User.IsInRole(AppRoles.Technician) || User.IsInRole(AppRoles.Admin);
+    var isAdmin = User.IsInRole(AppRoles.Admin);
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Verger Naturals · IT Service Desk</title>
+    <link rel="icon" href="data:,">
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body>
+@if (User.Identity?.IsAuthenticated == true)
+{
+    <div class="app">
+        <aside class="sidebar">
+            <div class="brand">
+                <div class="brand-mark"><img src="~/images/verger-emblem.png" alt="Verger" /></div>
+                <div class="brand-text"><b>Verger Naturals</b><span>IT Service Desk</span></div>
+            </div>
+            <nav class="nav">
+                @if (isTechOrAdmin)
+                {
+                    <a class="nav-btn @(IsActive("Dashboard") ? "active" : "")" asp-controller="Dashboard" asp-action="Index"><span class="nav-icon">📊</span> Dashboard</a>
+                }
+                <a class="nav-btn @(IsActive("Tickets") && path=="/tickets" || path.StartsWith("/tickets/index") ? "active" : "")" asp-controller="Tickets" asp-action="Index"><span class="nav-icon">🎫</span> @(isTechOrAdmin ? "All Tickets" : "My Tickets")</a>
+                <a class="nav-btn @(IsActive("Tickets") && path.StartsWith("/tickets/create") ? "active" : "")" asp-controller="Tickets" asp-action="Create"><span class="nav-icon">➕</span> New Ticket</a>
+                @if (isTechOrAdmin)
+                {
+                    <a class="nav-btn @(IsActive("Kpi") ? "active" : "")" asp-controller="Kpi" asp-action="Index"><span class="nav-icon">🎯</span> KPI Library</a>
+                    <a class="nav-btn @(IsActive("Reports") ? "active" : "")" asp-controller="Reports" asp-action="Index"><span class="nav-icon">📈</span> Reports</a>
+                }
+                @if (isAdmin)
+                {
+                    <a class="nav-btn @(IsActive("Team") ? "active" : "")" asp-controller="Team" asp-action="Index"><span class="nav-icon">👥</span> Team &amp; Roles</a>
+                }
+            </nav>
+            <div class="nav-spacer"></div>
+            <div class="sidebar-foot">
+                Signed in as <strong>@User.Identity!.Name</strong>
+                @if (isAdmin)
+                {
+                    <div class="role-tag" style="margin-top:6px;display:inline-block;">Admin</div>
+                }
+                else if (isTechOrAdmin)
+                {
+                    <div class="role-tag" style="margin-top:6px;display:inline-block;">Technician</div>
+                }
+                <form asp-controller="Account" asp-action="Logout" method="post" style="margin-top:8px;">
+                    <button type="submit" class="btn sm" style="width:100%;">Sign out</button>
+                </form>
+            </div>
+        </aside>
+        <div class="main">
+            @RenderBody()
+        </div>
+    </div>
+}
+else
+{
+    @RenderBody()
+}
+
+@if (TempData["Toast"] != null)
+{
+    <div class="toast" id="toastMsg">@TempData["Toast"]</div>
+}
+@if (TempData["ToastError"] != null)
+{
+    <div class="toast err" id="toastErr">@TempData["ToastError"]</div>
+}
+<script>
+  setTimeout(function(){
+    var t=document.getElementById('toastMsg'); if(t) t.remove();
+    var e=document.getElementById('toastErr'); if(e) e.remove();
+  }, 3200);
+</script>
+</body>
+</html>

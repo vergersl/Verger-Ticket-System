@@ -1,0 +1,66 @@
+@model TicketIndexVm
+@{ ViewData["Title"] = Model.IsRequesterView ? "My Tickets" : "All Tickets"; }
+<div class="topbar">
+    <div><h1>@(Model.IsRequesterView ? "My Tickets" : "All Tickets")</h1><p>@(Model.IsRequesterView ? "Track the tickets you've raised" : "Browse, filter and manage service-desk tickets")</p></div>
+    <a asp-action="Create" class="btn primary">＋ New ticket</a>
+</div>
+<div class="view">
+    <form method="get" class="toolbar">
+        <input type="text" name="q" value="@Model.Query" placeholder="Search tickets…" style="flex:1;min-width:200px;" />
+        <select name="status" onchange="this.form.submit()">
+            <option value="">All statuses</option>
+            @foreach (var s in Enum.GetValues<TicketStatus>())
+            {
+                <option value="@s" selected="@(Model.Status==s.ToString())">@s</option>
+            }
+        </select>
+        <select name="priority" onchange="this.form.submit()">
+            <option value="">All priorities</option>
+            @foreach (var p in Enum.GetValues<TicketPriority>())
+            {
+                <option value="@p" selected="@(Model.Priority==p.ToString())">@p</option>
+            }
+        </select>
+        <select name="category" onchange="this.form.submit()">
+            <option value="">All categories</option>
+            @foreach (var c in TicketCategories.All)
+            {
+                <option value="@c" selected="@(Model.Category==c)">@c</option>
+            }
+        </select>
+        <button type="submit" class="btn sm">Filter</button>
+    </form>
+
+    <table>
+        <thead><tr>
+            <th>Ticket</th><th>Category</th><th>Priority</th><th>Status</th>
+            @if (!Model.IsRequesterView) { <th>Requester</th><th>Assigned to</th> }
+            <th>Impact</th><th>Age</th>
+        </tr></thead>
+        <tbody>
+        @if (!Model.Tickets.Any())
+        {
+            <tr><td colspan="8" class="empty">@(Model.IsRequesterView ? "You haven't raised any tickets yet." : "No tickets match these filters.")</td></tr>
+        }
+        else
+        {
+            foreach (var t in Model.Tickets)
+            {
+                <tr class="row" onclick="location.href='@Url.Action("Details", new { id = t.Id })'">
+                    <td><div style="font-weight:600;">@t.Title</div><div class="hint">@t.Code</div></td>
+                    <td>@t.Category</td>
+                    <td><span class="badge prio-@t.Priority">@t.Priority</span></td>
+                    <td><span class="badge status-@t.Status">@t.Status</span></td>
+                    @if (!Model.IsRequesterView)
+                    {
+                        <td>@(t.Requester?.DisplayName ?? "—")</td>
+                        <td>@(string.IsNullOrEmpty(t.AssignedTo) ? "Unassigned" : t.AssignedTo)</td>
+                    }
+                    <td>@(t.ImpactValueUsd.HasValue ? "$" + t.ImpactValueUsd.Value.ToString("N0") : (string.IsNullOrEmpty(t.BusinessImpact) ? "—" : "noted"))</td>
+                    <td>@((DateTime.UtcNow - t.CreatedAt).Days)d</td>
+                </tr>
+            }
+        }
+        </tbody>
+    </table>
+</div>

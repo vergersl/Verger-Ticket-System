@@ -1,0 +1,33 @@
+@model KpiTrendVm
+@{ ViewData["Title"] = Model.Ref + " trend"; }
+<div class="topbar">
+    <div><h1>@Model.Ref</h1><p>@Model.Definition.Name</p></div>
+    <a asp-action="Index" class="btn sm">← Back to KPI Library</a>
+</div>
+<div class="view">
+    <p class="hint" style="margin-bottom:16px;">@Model.Definition.Csf · Target @Model.Definition.Target.ToString("P1")</p>
+    <table>
+        <thead><tr><th>Month</th><th>Actual</th><th>Target</th><th>vs. Target</th></tr></thead>
+        <tbody>
+        @foreach (var (month, actual) in Model.Trend)
+        {
+            var good = actual.HasValue && actual.Value >= Model.Definition.Target;
+            <tr>
+                <td>@month</td>
+                <td>@(actual.HasValue ? actual.Value.ToString("P1") : "no data")</td>
+                <td>@Model.Definition.Target.ToString("P1")</td>
+                <td>
+                    @if (actual.HasValue)
+                    {
+                        <span class="pill @(good ? "good" : "bad")">@(good ? "On target" : "Below target")</span>
+                    }
+                    else
+                    {
+                        @:—
+                    }
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+</div>

@@ -1,0 +1,52 @@
+@model TicketCreateVm
+@{ ViewData["Title"] = "New Ticket"; }
+<div class="topbar">
+    <div><h1>New Ticket</h1><p>Log a new IT support request</p></div>
+</div>
+<div class="view">
+    <div class="card form-card">
+        <div asp-validation-summary="All" class="validation-summary-errors"></div>
+        <form asp-action="Create" method="post">
+            <div class="field">
+                <label asp-for="Title">Subject</label>
+                <input asp-for="Title" placeholder="Short summary of the issue" />
+                <span asp-validation-for="Title" class="field-validation-error"></span>
+            </div>
+            <div class="field">
+                <label asp-for="Description">Description</label>
+                <textarea asp-for="Description" placeholder="What's happening? Steps to reproduce, error messages, affected system…"></textarea>
+            </div>
+            <div class="field">
+                <label asp-for="BusinessImpact">Business Impact / Savings <span class="required">*</span></label>
+                <textarea asp-for="BusinessImpact" placeholder="Describe the business impact of resolving this — e.g. downtime avoided, hours saved, revenue protected, risk mitigated."></textarea>
+                <span asp-validation-for="BusinessImpact" class="field-validation-error"></span>
+                <div class="hint">Required for every ticket — this is how the IT team's contribution gets measured and reported.</div>
+            </div>
+            <div class="field">
+                <label asp-for="ImpactValueUsd">Estimated value (USD, optional)</label>
+                <input asp-for="ImpactValueUsd" type="number" min="0" step="1" placeholder="e.g. 500" />
+            </div>
+            <div class="row2">
+                <div class="field">
+                    <label asp-for="Category">Category</label>
+                    <select asp-for="Category">
+                        @foreach (var c in TicketCategories.All)
+                        {
+                            <option value="@c">@c</option>
+                        }
+                    </select>
+                </div>
+                <div class="field">
+                    <label asp-for="Priority">Priority</label>
+                    <select asp-for="Priority">
+                        <option value="Low">Low — SLA 72h</option>
+                        <option value="Medium" selected>Medium — SLA 24h</option>
+                        <option value="High">High — SLA 8h</option>
+                        <option value="Critical">Critical — SLA 4h</option>
+                    </select>
+                </div>
+            </div>
+            <button type="submit" class="btn primary">Submit ticket</button>
+        </form>
+    </div>
+</div>

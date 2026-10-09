@@ -1,0 +1,39 @@
+@model RegisterVm
+@{ ViewData["Title"] = "Create account"; }
+<div class="view">
+    <div class="card auth-card">
+        <div style="text-align:center;margin-bottom:18px;">
+            <img src="~/images/verger-emblem.png" alt="Verger" style="width:48px;" />
+            <h2 style="margin:10px 0 2px;">Create your account</h2>
+            <p class="hint">Verger Naturals IT Service Desk</p>
+        </div>
+        <div asp-validation-summary="All" class="validation-summary-errors"></div>
+        <form asp-action="Register" method="post">
+            <div class="field">
+                <label asp-for="DisplayName">Your name</label>
+                <input asp-for="DisplayName" placeholder="e.g. Nadeeshan Perera" />
+                <span asp-validation-for="DisplayName" class="field-validation-error"></span>
+            </div>
+            <div class="field">
+                <label asp-for="Email">Email</label>
+                <input asp-for="Email" autocomplete="username" />
+                <span asp-validation-for="Email" class="field-validation-error"></span>
+            </div>
+            <div class="field">
+                <label asp-for="Password">Password</label>
+                <input asp-for="Password" type="password" autocomplete="new-password" />
+                <span asp-validation-for="Password" class="field-validation-error"></span>
+            </div>
+            <div class="field">
+                <label asp-for="ConfirmPassword">Confirm password</label>
+                <input asp-for="ConfirmPassword" type="password" autocomplete="new-password" />
+                <span asp-validation-for="ConfirmPassword" class="field-validation-error"></span>
+            </div>
+            <p class="hint" style="margin-bottom:14px;">Everyone starts as a Requester — the first person to ever register becomes Admin automatically so someone can assign Technician/Admin roles afterward.</p>
+            <button type="submit" class="btn primary" style="width:100%;">Create account</button>
+        </form>
+        <p class="hint" style="text-align:center;margin-top:16px;">
+            Already have an account? <a asp-action="Login" style="color:var(--green-600);font-weight:600;">Sign in</a>
+        </p>
+    </div>
+</div>
